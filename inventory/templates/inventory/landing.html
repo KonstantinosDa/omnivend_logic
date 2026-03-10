@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OmniVend | Premium Vending Network</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    
+    <style>
+        :root { 
+            --primary-color: #2c3e50; 
+            --accent-color: #3498db; 
+            --card-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        
+        body { 
+            background-color: #f3f4f6; 
+            font-family: 'Inter', sans-serif; 
+            color: #1f2937;
+        }
+
+        .navbar { 
+            background-color: var(--primary-color); 
+            padding: 1rem 0;
+        }
+
+        .hero-section { 
+            background: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), 
+                        url('https://images.unsplash.com/photo-1571380401583-72ca8bf944f8?q=80&w=2000'); 
+            background-size: cover; 
+            background-position: center;
+            color: white; 
+            padding: 120px 0; 
+            margin-bottom: 3rem;
+        }
+
+        .product-card { 
+            border: none; 
+            border-radius: 12px;
+            transition: all 0.3s ease; 
+            overflow: hidden;
+            background: white;
+        }
+
+        .product-card:hover { 
+            transform: translateY(-10px); 
+            box-shadow: var(--card-shadow);
+        }
+
+                /* Image Handling: Forces same height and fits perfectly */
+        .img-container {
+            height: 250px; /* Fixed height for all boxes */
+            width: 100%;
+            background-color: #ffffff; /* Clean white background */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 15px; /* Space around the image so it doesn't touch the edges */
+            border-bottom: 1px solid #eee;
+            overflow: hidden; /* This stops the "spilling" */
+        }
+
+        /* This forces the image to fit INSIDE the 250px without cropping */
+        .img-container img {
+            max-width: 100%;
+            max-height: 100%;
+            width: auto;
+            height: auto;
+            object-fit: contain; /* The magic: fits the whole image inside the box */
+        }
+
+        .price-tag {
+            background-color: #10b981;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-weight: 700;
+        }
+
+        .availability-badge {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #6b7280;
+            margin-bottom: 0.75rem;
+            display: block;
+            font-weight: 600;
+        }
+
+        .location-item {
+            background: #f9fafb;
+            border-left: 4px solid var(--accent-color);
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 8px;
+        }
+
+        footer {
+            background-color: #111827;
+            color: #9ca3af;
+            padding: 3rem 0;
+            margin-top: 5rem;
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar navbar-expand-lg navbar-dark sticky-top shadow-sm">
+        <div class="container">
+            <a class="navbar-brand fw-extrabold fs-3" href="#">OMNIVEND</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto align-items-center">
+                    <li class="nav-item"><a class="nav-link active" href="#">Browse</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/api/machines/">API</a></li>
+                    <li class="nav-item ms-lg-3">
+                        <a class="btn btn-outline-light btn-sm px-4" href="http://127.0.0.1:8000/dashboard/">Partner Portal</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <header class="hero-section text-center">
+        <div class="container">
+            <h1 class="display-3 fw-bold mb-3">Smart Snacking.</h1>
+            <p class="lead mb-0">Discover real-time inventory at any OmniVend location.</p>
+        </div>
+    </header>
+
+    <main class="container">
+        <div class="row align-items-center mb-5">
+            <div class="col-md-6">
+                <h2 class="fw-bold m-0">Available Near You</h2>
+            </div>
+            <div class="col-md-6 text-md-end">
+                <p class="text-muted m-0">Showing all registered products in the network</p>
+            </div>
+        </div>
+
+        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+            {% for product in products %}
+            <div class="col">
+                <div class="card h-100 product-card shadow-sm">
+                    <div class="img-container">
+                    {% if product.image %}
+                        <img src="{{ product.image.url }}" alt="{{ product.name }}">
+                    {% else %}
+                        <div class="text-muted small">No Image Available</div>
+                    {% endif %}
+                </div>
+                                    
+                    <div class="card-body d-flex flex-column">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="card-title fw-bold m-0">{{ product.name }}</h5>
+                            <span class="price-tag">€{{ product.price }}</span>
+                        </div>
+                        
+                        <div class="mt-auto">
+                            <span class="availability-badge">Live Availability</span>
+                            <div class="availability-list">
+                                {% for stock in product.machinestock_set.all %}
+                                    <div class="location-item shadow-xs">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <span class="fw-bold small">{{ stock.vending_machine.location_name }}</span>
+                                            <span class="badge bg-white text-dark border small">{{ stock.quantity }} left</span>
+                                        </div>
+                                        <div class="text-muted" style="font-size: 0.75rem;">Slot: {{ stock.vending_machine_slot }}</div>
+                                    </div>
+                                {% empty %}
+                                    <div class="text-center py-3 bg-light rounded text-danger small fw-bold">
+                                        SOLD OUT EVERYWHERE
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </main>
+
+    <footer>
+        <div class="container text-center">
+            <p class="fw-bold text-white mb-2">OMNIVEND LOGIC</p>
+            <p class="small mb-0">The ultimate IoT Vending Management Solution.</p>
+            <div class="mt-3">
+                <small>&copy; 2026 | Developed with Django & Java</small>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

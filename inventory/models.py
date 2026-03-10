@@ -1,5 +1,8 @@
 from django.db import models
 from django.utils.text import slugify
+
+
+
 class Category(models.Model):
     name = models.CharField(max_length=100)
     slug = models.SlugField(unique=True, blank=True) 
@@ -16,18 +19,37 @@ class Category(models.Model):
     def __str__(self):
         return self.name
     
+
+
+
+
+
 class Store(models.Model):
     location_name = models.CharField(max_length=200)
     latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
     longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
     
 
+
+
+
+
 class VendingMachine(models.Model):
+
+    STATUS_CHOICES = [
+        ('active', 'Online'),
+        ('inactive', 'Offline'),
+        ('maintenance', 'Under Repair'),
+    ]
+
+
     MachineName = models.CharField(max_length=250, blank=True, editable=False)
     location_name = models.CharField(max_length=200)
     latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
     longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
-    
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')
+
+
     def save(self, *args, **kwargs):
         clean_location = self.location_name.replace(" ", "")
 
@@ -41,12 +63,15 @@ class VendingMachine(models.Model):
         existing_count = query.count()
         
         # Generates the name (e.g., "Airport0")
-        self.MachineName = f"{clean_location}_{existing_count}"
-            
+        self.MachineName = f"{clean_location}_{existing_count}"   
         super().save(*args, **kwargs)
 
     def __str__(self):
         return self.MachineName
+
+
+
+
 
 class Product(models.Model):
     name = models.CharField(max_length=100)
@@ -59,10 +84,15 @@ class Product(models.Model):
     )
     price = models.DecimalField(max_digits=6, decimal_places=2)
     stock_quantity = models.IntegerField(default=0) # Good for vending inventory
-    
+    image = models.ImageField(upload_to='products/', blank=True, null=True)
     def __str__(self):
         return f"{self.name} ({self.category.name if self.category else 'No Category'})"
-    
+
+
+
+
+
+
 class MachineStock(models.Model):
     vending_machine = models.ForeignKey(VendingMachine, on_delete=models.CASCADE, related_name='inventory')
     vending_machine_slot = models.CharField(max_length=4)
