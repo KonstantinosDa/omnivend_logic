@@ -25,10 +25,37 @@ class Category(models.Model):
 
 
 class Store(models.Model):
+
+    STATUS_CHOICES = {
+        ('open', 'open'),
+        ('closed', 'closed')
+    }
+
     location_name = models.CharField(max_length=200)
     latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
     longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
-    
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='closed')
+    opening_time = models.TimeField(null=True, blank=True)
+    closing_time = models.TimeField(null=True, blank=True)
+
+    # why IntegerField you ask whelp this is the most efficient way to store this data 
+    # every day i going to have a bit value Mon = 1 Tue = 2 Wed = 4 Thu = 8  Fri = 16 Sat = 32 Sun = 64
+    # i will save the sum of the days and and when i need to use the dictionary DAY_VALUES to 'decode' the saved value 
+    # is it overkill ...yes but i'm trying to land a job and is my idea and i'm proud of it  
+    open_days= models.IntegerField(null=True, blank=True)
+
+    def get_open_days_display(self):
+        DAY_VALUES = [
+            ('Mon', 1),
+            ('Tue', 2),
+            ('Wed', 4),
+            ('Thu', 8),
+            ('Fri', 16),
+            ('Sat', 32),
+            ('Sun', 64),
+        ]
+
+        return [day for day, val in DAY_VALUES if self.open_days and (self.open_days & val)]
 
 
 
@@ -47,7 +74,7 @@ class VendingMachine(models.Model):
     location_name = models.CharField(max_length=200)
     latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
     longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='inactive')
 
 
     def save(self, *args, **kwargs):
