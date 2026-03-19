@@ -62,14 +62,25 @@
                         <td><strong>{{ machine.location_name }}</strong></td>
                         <td>
                             <span class="badge bg-success-subtle text-success px-3">
-                                Online
+                                {{ machine.get_status_display  }}
                             </span>
                         </td>
                         <td class="text-muted small">
                             {{ machine.latitude }}, {{ machine.longitude }}
                         </td>
                         <td class="text-end">
-                            <button class="btn btn-sm btn-outline-secondary">Manage</button>
+                            <button 
+                                class="btn btn-sm btn-outline-secondary MachineManage-btn"
+                                data-id="{{ machine.id }}"
+                                data-locationName="{{ machine.location_name}}"
+                                data-name="{{ machine.MachineName }}"
+                                data-status="{{ machine.status }}"
+                                data-lat="{{ machine.latitude }}"
+                                data-lng="{{ machine.longitude }}"
+                                data-bs-toggle="modal"
+                                data-bs-target="#MachineManageModal">
+                                Manage
+                            </button>
                         </td>
                     </tr>
                     {% empty %}
@@ -119,11 +130,25 @@
                         </td>
                         <td>
                             {{ store.opening_time}} - {{store.closing_time}}
+                        </td>
                         <td>
                             {{ store.get_open_days_display|join:", " }}
                         </td>
                         <td class="text-end">
-                            <button class="btn btn-sm btn-outline-secondary">Manage</button>
+                            <button 
+                                class="btn btn-sm btn-outline-secondary manage-btn"
+                                data-id="{{ store.id }}"
+                                data-name="{{ store.location_name }}"
+                                data-status="{{ store.status }}"
+                                data-lat="{{ store.latitude }}"
+                                data-lng="{{ store.longitude }}"
+                                data-opening="{{ store.opening_time|time:'H:i' }}"
+                                data-closing="{{ store.closing_time|time:'H:i' }}"
+                                data-days="{{ store.get_open_days_display|join:', ' }}"
+                                data-bs-toggle="modal"
+                                data-bs-target="#manageModal">
+                                Manage
+                            </button>
                         </td>
                     </tr>
                     {% empty %}
@@ -210,7 +235,6 @@
                 <input type="number" step="any" min="-180" max="180" name="longitude" class="form-control" required>
             </div>
 
-                <!-- Days of the Week -->
                 <div class="mb-3">
                     <label class="form-label">Open Days</label>
 
@@ -251,8 +275,6 @@
                         </div>
                     </div>
                 </div>
-
-                <!-- Opening / Closing -->
                 <div class="row">
                     <div class="col-md-6 mb-3">
                         <label class="form-label">Opening Time</label>
@@ -275,5 +297,237 @@
         </div>
     </div>
 </div>
+<!-- sotre manage madal --> 
+<div class="modal fade" id="manageModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form method="POST"  action="{% url 'edit_store' %}">
+        {% csrf_token %}
+        
+        <div class="modal-header">
+          <h5 class="modal-title">Manage Store</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
 
+        <div class="modal-body">
+          
+          <input type="hidden" name="store_id" id="storeId">
+
+          <div class="mb-2">
+            <label>Name</label>
+            <input type="text" class="form-control" name="location_name" id="storeName">
+          </div>
+
+          <div class="mb-2">
+            <label>Status</label>
+            <select class="form-select" name="status" id="storeStatus">
+                <option value="Open">Open</option>
+                <option value="Closed">Closed</option>
+            </select>
+          </div>
+
+          <div class="mb-2">
+            <label>Latitude</label>
+            <input type="text" class="form-control" name="latitude" id="storeLat">
+          </div>
+
+          <div class="mb-2">
+            <label>Longitude</label>
+            <input type="text" class="form-control" name="longitude" id="storeLng">
+          </div>
+
+          <div class="mb-2">
+            <label>Opening Time</label>
+            <input type="time" class="form-control" name="opening_time" id="storeOpening">
+          </div>
+
+          <div class="mb-2">
+            <label>Closing Time</label>
+            <input type="time" class="form-control" name="closing_time" id="storeClosing">
+          </div>
+
+        <div class="mb-2">
+            <label>Open Days</label>
+                <div id="storeDaysContainer">
+
+                    <div class="form-check">
+                    <input class="form-check-input day-checkbox" type="checkbox" value="Mon" name="open_days">
+                    <label class="form-check-label">Monday</label>
+                    </div>
+
+                    <div class="form-check">
+                    <input class="form-check-input day-checkbox" type="checkbox" value="Tue" name="open_days">
+                    <label class="form-check-label">Tuesday</label>
+                    </div>
+
+                    <div class="form-check">
+                    <input class="form-check-input day-checkbox" type="checkbox" value="Wed" name="open_days">
+                    <label class="form-check-label">Wednesday</label>
+                    </div>
+
+                    <div class="form-check">
+                    <input class="form-check-input day-checkbox" type="checkbox" value="Thu" name="open_days">
+                    <label class="form-check-label">Thursday</label>
+                    </div>
+
+                    <div class="form-check">
+                    <input class="form-check-input day-checkbox" type="checkbox" value="Fri" name="open_days">
+                    <label class="form-check-label">Friday</label>
+                    </div>
+
+                    <div class="form-check">
+                    <input class="form-check-input day-checkbox" type="checkbox" value="Sat" name="open_days">
+                    <label class="form-check-label">Saturday</label>
+                    </div>
+
+                    <div class="form-check">
+                    <input class="form-check-input day-checkbox" type="checkbox" value="Sun" name="open_days">
+                    <label class="form-check-label">Sunday</label>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+        <div class="modal-footer d-flex justify-content-between">
+
+            <button type="submit"
+                    name="action"
+                    value="delete"
+                    class="btn btn-danger"
+                    onclick="return confirm('Are you sure you want to delete this store?')">
+                Delete
+            </button>
+
+            <button type="submit"
+                    name="action"
+                    value="save"
+                    class="btn btn-primary">
+                Save changes
+            </button>
+
+        </div>
+        
+        
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- machine manage madal -->
+ <div class="modal fade" id="MachineManageModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form method="POST"  action="{% url 'edit_machine' %}">
+        {% csrf_token %}
+        
+        <div class="modal-header">
+          <h5 class="modal-title">Manage Machine</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+
+        <div class="modal-body">
+          
+            <input type="hidden" name="machine_id" id="machineId">
+
+            <div class="mb-2">
+                <label>Location</label>
+                <input type="text" class="form-control" name="location_name" id="location_name">
+            </div>
+
+            <div class="mb-2">
+                <label>Machine Name</label>
+                <input type="text" class="form-control" name="Machine_name" id="machineName">
+            </div>
+
+          <div class="mb-2">
+            <label>Status</label>
+            <select class="form-select" name="status" id="machineStatus">
+                <option value="active">Online</option>
+                <option value="inactive">Offline</option>
+            </select>
+          </div>
+
+          <div class="mb-2">
+            <label>Latitude</label>
+            <input type="text" class="form-control" name="latitude" id="machineLat">
+          </div>
+
+          <div class="mb-2">
+            <label>Longitude</label>
+            <input type="text" class="form-control" name="longitude" id="machineLng">
+          </div>
+
+        </div>
+        <div class="modal-footer d-flex justify-content-between">
+
+            <button type="submit"
+                    name="action"
+                    value="delete"
+                    class="btn btn-danger"
+                    onclick="return confirm('Are you sure you want to delete this machine?')">
+                Delete
+            </button>
+
+            <button type="submit"
+                    name="action"
+                    value="save"
+                    class="btn btn-primary">
+                Save changes
+            </button>
+
+        </div>
+        
+        
+      </form>
+    </div>
+  </div>
+</div>
+<!-- sotre manage javasript --> 
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        document.querySelectorAll('.manage-btn').forEach(button => {
+            button.addEventListener('click', function () {
+
+                document.getElementById('storeId').value = this.dataset.id;
+                document.getElementById('storeName').value = this.dataset.name;
+                document.getElementById('storeStatus').value = this.dataset.status;
+                document.getElementById('storeLat').value = this.dataset.lat;
+                document.getElementById('storeLng').value = this.dataset.lng;
+                document.getElementById('storeOpening').value = this.dataset.opening;
+                document.getElementById('storeClosing').value = this.dataset.closing;
+                document.querySelectorAll('.day-checkbox').forEach(cb => cb.checked = false);
+
+                let days = this.dataset.days 
+                    ? this.dataset.days.split(',').map(d => d.trim()) 
+                    : [];
+
+                document.querySelectorAll('.day-checkbox').forEach(cb => {
+                    if (days.includes(cb.value)) {
+                        cb.checked = true;
+                    }
+                });
+
+            });
+        });
+    });
+</script>
+
+
+<!-- -->
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        document.querySelectorAll('.MachineManage-btn').forEach(button => {
+            button.addEventListener('click', function () {
+
+                document.getElementById('machineId').value = this.dataset.id;
+                document.getElementById('machineName').value = this.dataset.name;
+                document.getElementById('machineStatus').value = this.dataset.status;
+                document.getElementById('machineLat').value = this.dataset.lat;
+                document.getElementById('machineLng').value = this.dataset.lng;
+                document.getElementById('location_name').value = this.dataset.locationname;
+            });
+        });
+    });
+</script>
 {% endblock %}

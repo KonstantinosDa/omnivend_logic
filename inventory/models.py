@@ -27,14 +27,14 @@ class Category(models.Model):
 class Store(models.Model):
 
     STATUS_CHOICES = {
-        ('open', 'open'),
-        ('closed', 'closed')
+        ('open', 'Open'),
+        ('closed', 'Closed')
     }
 
     location_name = models.CharField(max_length=200)
     latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
     longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='closed')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Closed')
     opening_time = models.TimeField(null=True, blank=True)
     closing_time = models.TimeField(null=True, blank=True)
 
