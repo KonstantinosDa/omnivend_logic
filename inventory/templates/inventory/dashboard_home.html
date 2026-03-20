@@ -9,35 +9,61 @@
     </div>
 </div>
 
-<div class="row g-4 mb-5">
+<div class="row g-4 mb-4">
+
+    <!-- Machines -->
     <div class="col-md-3">
-        <div class="card p-3 bg-white">
+        <div class="card p-3 bg-white text-center h-100">
             <small class="text-muted fw-bold">TOTAL MACHINES</small>
-            <h2 class="fw-bold text-dark mb-0">{{ machine_count }}</h2>
+            <h2 class="fw-bold text-dark mb-3">{{ machine_count }}</h2>
+
+            <button class="btn btn-primary w-100 mt-auto"
+                data-bs-toggle="modal" data-bs-target="#addMachineModal">
+                + Add Machine
+            </button>
         </div>
     </div>
 
+    <!-- Stores -->
     <div class="col-md-3">
-        <div class="card p-3 bg-white">
+        <div class="card p-3 bg-white text-center h-100">
             <small class="text-muted fw-bold">TOTAL STORES</small>
-            <h2 class="fw-bold text-dark mb-0">{{ store_count }}</h2>
+            <h2 class="fw-bold text-dark mb-3">{{ store_count }}</h2>
+
+            <button class="btn btn-primary w-100 mt-auto"
+                data-bs-toggle="modal" data-bs-target="#addStoreModal">
+                + Add Store
+            </button>
         </div>
     </div>
 
-    <div class="col-md-3"></div>
-
+    <!-- Storage -->
     <div class="col-md-3">
-        <div class="d-flex flex-column gap-2">
-            <button class="btn btn-primary px-4 py-2" data-bs-toggle="modal" data-bs-target="#addMachineModal">
-                + Add New Machine
-            </button>
-            <button class="btn btn-primary px-4 py-2" data-bs-toggle="modal" data-bs-target="#addStoreModal">
-                + Add New Store
+        <div class="card p-3 bg-white text-center h-100">
+            <small class="text-muted fw-bold">TOTAL STORAGE</small>
+            <h2 class="fw-bold text-dark mb-3">{{ storage_count }}</h2>
+
+            <button class="btn btn-primary w-100 mt-auto"
+                data-bs-toggle="modal" data-bs-target="#addStorageModal">
+                + Add Storage
             </button>
         </div>
     </div>
-</div>
 
+    <!-- Products -->
+    <div class="col-md-3">
+        <div class="card p-3 bg-white text-center h-100">
+            <small class="text-muted fw-bold">TOTAL PRODUCTS</small>
+            <h2 class="fw-bold text-dark mb-3">{{ product_count }}</h2>
+
+            <button class="btn btn-primary w-100 mt-auto"
+                data-bs-toggle="modal" data-bs-target="#addProductModal">
+                + Add Product
+            </button>
+        </div>
+    </div>
+
+</div>
 <!-- Machines Table -->
 <div class="card mb-4">
     <div class="card-header bg-white py-3">
@@ -297,7 +323,103 @@
         </div>
     </div>
 </div>
-<!-- sotre manage madal --> 
+<!-- add sotrage madal -->
+
+<div class="modal fade" id="addStorageModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 class="modal-title">Add New Storage</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <form method="POST" action="{% url 'add_storage' %}">
+                {% csrf_token %}
+
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Storage Name</label>
+                        <input type="text" name="name" class="form-control" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Location Name</label>
+                        <input type="text" name="location_name" class="form-control" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Latitude</label>
+                        <input type="number" step="any" min="-90" max="90" name="latitude" class="form-control" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Longitude</label>
+                        <input type="number" step="any" min="-180" max="180" name="longitude" class="form-control" required>
+                    </div>
+                </div> 
+
+                <div class="modal-footer"> 
+                    <button type="submit" class="btn btn-success">Save Storage</button>
+                </div>
+
+            </form>
+
+        </div>
+    </div>
+</div>
+<!-- add Product-->
+<div class="modal fade" id="addProductModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 class="modal-title">Add New Product</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <form method="POST" action="{% url 'add_product' %}" enctype="multipart/form-data">
+                {% csrf_token %}
+
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Product Name</label>
+                        <input type="text" name="name" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Category</label>
+                        <select name="category" class="form-control" required>
+                            <option value="">Select Category</option>
+                            {% for cat in category %}
+                                <option value="{{ cat.id }}">{{ cat.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Price</label>
+                        <input type="number" step="any" name="Price" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">stock_quantity</label>
+                        <input type="number" step="any" name="stock_quantity" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Product Image</label>
+                        <input type="file" name="image">
+                    </div>
+                    <div class="modal-footer">
+                        <button type="submit" class="btn btn-success">Save Product</button>
+                    </div>
+                </div>
+            </form>
+
+        </div>
+    </div>
+</div> 
+
+
+
+<!-- store manage madal --> 
 <div class="modal fade" id="manageModal" tabindex="-1">
   <div class="modal-dialog">
     <div class="modal-content">

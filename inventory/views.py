@@ -1,35 +1,47 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from .models import Product
 from rest_framework import generics
-from .models import VendingMachine,Store
+from .models import VendingMachine,Store,Storage,Product,Category
 from .serializers import VendingMachineSerializer
 from .forms import MachineForm, ProductForm
 from django.contrib.auth.decorators import login_required
 
 class VendingMachineList(generics.ListCreateAPIView):
+
     queryset = VendingMachine.objects.all()
     serializer_class = VendingMachineSerializer
 
 
 def landing_page(request):
-    products = Product.objects.all() # Fetch all products from DB
+
+    products = Product.objects.all() 
     return render(request, 'inventory/landing.html', {'products': products})
 
 @login_required
 def dashboard_home(request):
-    # Fetch all machines so we can show them in a list
+
     machines = VendingMachine.objects.all()
     stores = Store.objects.all()
-    
+    storage = Storage.objects.all()
+    product = Product.objects.all()
+    category = Category.objects.all()
     return render(request, 'inventory/dashboard_home.html', {
         'stores' : stores,
         'store_count' : stores.count(),
         'machines': machines,
-        'machine_count': machines.count()
+        'machine_count': machines.count(),
+        'storage' : storage,
+        'storage_count' : storage.count(),
+        'product' : product,
+        'product_count' : product.count(),
+        'category': category,
+        'category_count': category.count(),
+
     })
 
 
 def add_machine(request):
+
     if request.method == "POST":
         VendingMachine.objects.create(
             location_name=request.POST['location_name'],
@@ -39,6 +51,7 @@ def add_machine(request):
     return redirect('dashboard')
 
 def add_store(request):
+
     if request.method == "POST":
         selected_days = request.POST.getlist('open_days')
 
@@ -90,20 +103,18 @@ def edit_store(request):
 
 
 def edit_machine(request):
-    print('-----------------__________________---------------------')
+
     if request.method == "POST":
         machine_id = request.POST.get("machine_id")
         machine = get_object_or_404(VendingMachine, id=machine_id)
         action = request.POST.get("action")
 
         if action == "save":
+            machine.MachineName=  request.POST.get("machineName")
             machine.location_name = request.POST.get("location_name")
             machine.latitude = request.POST.get("latitude")
             machine.longitude = request.POST.get("longitude")
-            print(request.POST.get("status"))
-            print(machine.status)
             machine.status = request.POST.get("status")
-            print(machine.status)
             machine.save()
 
         #-_- add the functionality to add prodacts to the machine and to what slot 
@@ -114,4 +125,69 @@ def edit_machine(request):
             machine.delete()
             
     return redirect('dashboard')
- 
+
+
+def add_storage(request):
+
+    if request.method == "POST":
+        Storage.objects.create(
+            name=request.POST['name'],
+            location_name=request.POST['location_name'],
+            latitude=float(request.POST['latitude']),
+            longitude=float(request.POST['longitude']),
+        )
+    return redirect('dashboard')
+
+
+def edit_storage(request):
+
+    if request.method == "POST":
+        storage_id = request.POST.get("storage_id")
+        storage = get_object_or_404(Storage, id=storage_id)
+        action = request.POST.get("action")
+
+        if action == "save":
+            storage.location_name = request.POST.get("location_name")
+            storage.latitude = request.POST.get("latitude")
+            storage.longitude = request.POST.get("longitude")
+            storage.status = request.POST.get("status")
+            storage.save()
+
+        elif action =='delete':
+            storage.delete()
+            
+    return redirect('dashboard')
+
+def add_product(request):
+    if request.method == "POST":
+        category_id = request.POST.get("category")
+        category = Category.objects.get(id=category_id)
+        image_ = request.FILES.get("image")
+        print(request.FILES)
+        Product.objects.create(
+            name=request.POST['name'],
+            category=category,
+            price=float(request.POST['Price']),
+            stock_quantity=float(request.POST['stock_quantity']),
+            image=image_,
+        )
+    return redirect('dashboard')
+
+def edit_product(request):
+    if request.method == "POST":
+        product_id = request.POST.get("storage_id")
+        product = get_object_or_404(Product, id=product_id)
+        action = request.POST.get("action")
+
+        if action == "save":
+            product.name = request.POST.get("product_name")
+            product.price = request.POST.get("price")
+            product.stock_quantity = request.POST.get("stock_quantity")
+            product.image = request.POST.get("status")
+            product.category =request.POST.get("category")
+            product.save()
+
+        elif action =='delete':
+            product.delete()
+            
+    return redirect('dashboard')

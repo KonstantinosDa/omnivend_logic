@@ -19,8 +19,11 @@ class Category(models.Model):
     def __str__(self):
         return self.name
     
-
-
+class Storage(models.Model):
+    name = models.CharField(max_length=100,null=True, blank=True)
+    location_name = models.CharField(max_length=200)
+    latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
 
 
 
@@ -102,23 +105,24 @@ class VendingMachine(models.Model):
 
 class Product(models.Model):
     name = models.CharField(max_length=100)
-    # Link to the Category model
     category = models.ForeignKey(
         Category, 
-        on_delete=models.SET_NULL, # If category is deleted, keep product but set category to null
+        on_delete=models.SET_NULL, 
         null=True,
         related_name='products'
     )
     price = models.DecimalField(max_digits=6, decimal_places=2)
-    stock_quantity = models.IntegerField(default=0) # Good for vending inventory
+    stock_quantity = models.IntegerField(default=0)
     image = models.ImageField(upload_to='products/', blank=True, null=True)
     def __str__(self):
         return f"{self.name} ({self.category.name if self.category else 'No Category'})"
 
 
 
-
-
+class StorageStock(models.Model):
+    storage = models.ForeignKey(Storage, on_delete=models.CASCADE, related_name='inventory')
+    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    quantity = models.PositiveIntegerField(default=0)
 
 class MachineStock(models.Model):
     vending_machine = models.ForeignKey(VendingMachine, on_delete=models.CASCADE, related_name='inventory')
