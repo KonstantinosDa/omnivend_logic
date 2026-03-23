@@ -23,7 +23,7 @@ def dashboard_home(request):
     machines = VendingMachine.objects.all()
     stores = Store.objects.all()
     storage = Storage.objects.all()
-    product = Product.objects.all()
+    products = Product.objects.all()
     category = Category.objects.all()
     return render(request, 'inventory/dashboard_home.html', {
         'stores' : stores,
@@ -32,8 +32,8 @@ def dashboard_home(request):
         'machine_count': machines.count(),
         'storage' : storage,
         'storage_count' : storage.count(),
-        'product' : product,
-        'product_count' : product.count(),
+        'products' : products,
+        'product_count' : products.count(),
         'category': category,
         'category_count': category.count(),
 
@@ -147,10 +147,10 @@ def edit_storage(request):
         action = request.POST.get("action")
 
         if action == "save":
+            storage.name = request.POST.get("location_name")
             storage.location_name = request.POST.get("location_name")
             storage.latitude = request.POST.get("latitude")
             storage.longitude = request.POST.get("longitude")
-            storage.status = request.POST.get("status")
             storage.save()
 
         elif action =='delete':
@@ -175,16 +175,18 @@ def add_product(request):
 
 def edit_product(request):
     if request.method == "POST":
-        product_id = request.POST.get("storage_id")
+        product_id = request.POST.get("product_id")
         product = get_object_or_404(Product, id=product_id)
         action = request.POST.get("action")
-
+        category_id = request.POST.get("category")
+        category = Category.objects.get(id=category_id)
+        print(request.POST.get("category"))
         if action == "save":
-            product.name = request.POST.get("product_name")
+            product.name = request.POST.get("name")
             product.price = request.POST.get("price")
             product.stock_quantity = request.POST.get("stock_quantity")
-            product.image = request.POST.get("status")
-            product.category =request.POST.get("category")
+            product.image = request.FILES.get("image")
+            product.category =category
             product.save()
 
         elif action =='delete':
