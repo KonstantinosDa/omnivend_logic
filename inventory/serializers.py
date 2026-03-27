@@ -3,15 +3,15 @@ from .models import VendingMachine, MachineStock
 
 class MachineStockSerializer(serializers.ModelSerializer):
     product_name = serializers.ReadOnlyField(source='product.name')
+    slot = serializers.IntegerField(source='vending_machine_slot')
 
     class Meta:
         model = MachineStock
-        fields = ['vending_machine_slot', 'product_name', 'quantity']
+        fields = ['slot', 'product_name', 'quantity']
 
 class VendingMachineSerializer(serializers.ModelSerializer):
-    # This shows the snacks inside the machine when you look at the machine
     inventory = MachineStockSerializer(many=True, read_only=True)
 
     class Meta:
         model = VendingMachine
-        fields = ['id', 'location_name', 'latitude', 'longitude', 'inventory']
+        fields = ['id', 'location_name', 'inventory']

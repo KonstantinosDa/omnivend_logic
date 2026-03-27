@@ -1,21 +1,78 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from .models import Product
 from rest_framework import generics
-from .models import VendingMachine,Store,Storage,Product,Category
+from .models import VendingMachine,Store,Storage,Product,Category,OrderItem,Order
 from .serializers import VendingMachineSerializer
 from .forms import MachineForm, ProductForm
 from django.contrib.auth.decorators import login_required
+from rest_framework.response import Response
+from rest_framework.decorators import api_view
+
 
 class VendingMachineList(generics.ListCreateAPIView):
 
     queryset = VendingMachine.objects.all()
     serializer_class = VendingMachineSerializer
 
+@api_view(['POST'])
+def sync_machine_stock(request):
+    machine_id = request.data.get("machine_id")
+    stock_data = request.data.get("stock", [])
+    
+    try:
+        machine = VendingMachine.objects.get(id=machine_id)
+        stock_items = machine.inventory.all()
+        
+    except VendingMachine.DoesNotExist:
+        return Response({"error": "Machine not found"}, status=404)
+
+    if request.data.get("event") == "sync":
+        new_order, created = Order.objects.get_or_create(
+                order_type = "restock",
+                machine = machine,
+                status="pending"
+
+            )
+
+        for item in stock_data:
+            product = Product.objects.get(id=item["product_id"])
+            stock_item = stock_items.get(vending_machine_slot=item["slot"])
+            stock_item.quantity =item["quantity"]
+            stock_item.save()
+            print("stock_item.quantity",stock_item.quantity)
+            print("stock_item.restock_threshold",stock_item.restock_threshold)
+            if stock_item.quantity < stock_item.restock_threshold:
+                order_item, created = OrderItem.objects.get_or_create(
+                    order=new_order,
+                    product=product,
+                    slot=item["slot"],
+                    defaults={
+                        "quantity": min(
+                            stock_item.expected_demand,
+                            machine.slot_cap - item["quantity"]
+                        )
+                    }
+                )
+
+                if not created:
+                    # Optionally update quantity instead of duplicating
+                    order_item.quantity = min(
+                        stock_item.expected_demand,
+                        machine.slot_cap - item["quantity"]
+                    )
+                    order_item.save()
+
+        if not new_order.items.exists():
+            new_order.delete()
+            
+    return Response({"status": "stock synced"})
+
 
 def landing_page(request):
 
     products = Product.objects.all() 
     return render(request, 'inventory/landing.html', {'products': products})
+
 
 @login_required
 def dashboard_home(request):
@@ -44,9 +101,11 @@ def add_machine(request):
 
     if request.method == "POST":
         VendingMachine.objects.create(
+            MachineName=request.POST['machine_name'],
             location_name=request.POST['location_name'],
             latitude=request.POST['latitude'],
             longitude=request.POST['longitude'],
+            slot_cap= request.POST['capaciry']
         )
     return redirect('dashboard')
 

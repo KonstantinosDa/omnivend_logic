@@ -78,6 +78,8 @@ class VendingMachine(models.Model):
     latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
     longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='inactive')
+    slot_cap = models.IntegerField(default=15)
+
 
 
     def save(self, *args, **kwargs):
@@ -125,14 +127,51 @@ class StorageStock(models.Model):
     quantity = models.PositiveIntegerField(default=0)
 
 class MachineStock(models.Model):
+    DEMAND_CHOICES = [
+        ("auto","Auto"),
+        ("set","Set")
+    ]
+    demadn_setting = models.CharField(max_length=20, choices=DEMAND_CHOICES,default="auto")
     vending_machine = models.ForeignKey(VendingMachine, on_delete=models.CASCADE, related_name='inventory')
     vending_machine_slot = models.CharField(max_length=4)
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
     quantity = models.PositiveIntegerField(default=0)
+    expected_demand = models.PositiveIntegerField(blank=True, null=True)
+    restock_threshold = models.PositiveIntegerField(blank=True, null=True)
+    
+    def save(self, *args, **kwargs):
+        if not self.expected_demand:
+            self.expected_demand = self.vending_machine.slot_cap
 
+        if not self.restock_threshold:
+            self.restock_threshold = self.vending_machine.slot_cap
+        super().save(*args, **kwargs)
+    
     class Meta:
         # Prevents having two separate rows for the same product in the same machine
         unique_together = ('vending_machine', 'vending_machine_slot')
 
     def __str__(self):
         return f"{self.quantity}x {self.product.name} at {self.vending_machine.MachineName}"
+
+class Order(models.Model):
+    ORDER_TYPE_CHOICES = [
+        ("store", "Store Order"),
+        ("restock", "Restock Order"),
+    ]
+    order_type = models.CharField(max_length=20, choices=ORDER_TYPE_CHOICES)
+    created_at = models.DateTimeField(auto_now_add=True)
+    status = models.CharField(
+        max_length=20,
+        choices=[("pending", "Pending"),("in_transit","in transit") ,("completed", "Completed")],
+        default="pending"
+    )
+    
+    store = models.ForeignKey(Store, null=True, blank=True, on_delete=models.CASCADE, related_name='order')
+    machine = models.ForeignKey(VendingMachine, null=True, blank=True, on_delete=models.CASCADE, related_name='order')
+
+class OrderItem(models.Model):
+    order = models.ForeignKey(Order, related_name="items", on_delete=models.CASCADE)
+    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    slot = models.CharField(max_length=4,null=True, blank=True)  # only used for machine orders
+    quantity = models.IntegerField()
