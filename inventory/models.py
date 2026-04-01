@@ -201,17 +201,7 @@ class Sales(models.Model):
     class Meta:
         unique_together = ("machine", "interval_type", "created_at")
 
-    def clean(self):
 
-        super().clean()
-        if self.source_type == "machine" and not self.machine:
-            raise ValidationError("Machine must be set when source_type is 'machine'.")
-        if self.source_type == "store" and not self.store:
-            raise ValidationError("Store must be set when source_type is 'store'.")
-        if self.source_type == "machine" and self.store:
-            raise ValidationError("Store must be empty when source_type is 'machine'.")
-        if self.source_type == "store" and self.machine:
-            raise ValidationError("Machine must be empty when source_type is 'store'.")
 
 class Item_Sales(models.Model):
     SOURCE = [
