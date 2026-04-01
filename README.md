@@ -1,22 +1,41 @@
-# omnivend_logic
-OmniVend Logic: A Django-powered Vending Machine Management System with Java IoT simulation.
+# OmniVend_Logic
 
+**OmniVend_Logic** is a comprehensive inventory management system for stores, warehouses, and vending machines.  
+It provides real-time stock monitoring, automated ordering, and predictive sales forecasting to streamline operations and improve efficiency.
 
-OmniVend_Logic is a comprehensive inventory management system designed for stores, warehouses, and vending machines. It combines real-time stock monitoring, automated ordering, and sales forecasting to streamline operations and improve efficiency. Built with scalability and automation in mind, this project showcases modern backend integration, API communication, and machine learning for predictive analytics.
+---
 
-Features
-Multi-Location Management: Add and manage multiple stores and warehouses in one platform.
-Vending Machine Integration: Track stock levels across all vending machines via a dedicated API.
-Automated Restocking: Enable a switch to trigger automatic orders based on remaining stock levels.
-Predictive Analytics: Use machine learning to estimate the next day's sales for any item.
-Real-Time Monitoring: Stay updated with live inventory data from all sources.
-How It Works
-Setup Locations: Easily add stores or warehouses into the system.
-Connect Vending Machines: Integrate vending machines via API to automatically report stock levels.
-Enable Auto-Orders: Turn on the auto-order switch to automatically replenish stock when low.
-Forecast Sales: Utilize machine learning models to predict sales and make informed stocking decisions.
-Technologies Used
-Backend: [Your backend language/framework]
-Database: [Your database, e.g., PostgreSQL, MongoDB]
-Machine Learning: Predictive models for sales forecasting
-API Integration: Custom API for vending machine communication
+## Features
+
+- **Multi-Location Management:** Add and manage multiple stores and warehouses.
+- **Vending Machine Integration:** Monitor stock levels in all vending machines via a dedicated API.
+- **Automated Restocking:** Enable a switch to trigger automatic orders based on stock levels.
+- **Predictive Analytics:** Machine learning estimates next-day sales for each item.
+- **Real-Time Monitoring:** Keep track of live inventory data from all sources.
+
+---
+
+## How It Works
+
+1. **Setup Locations:** Add stores or warehouses into the system.
+2. **Connect Vending Machines:** Integrate vending machines via API for automatic stock reporting.
+3. **Enable Auto-Orders:** Activate auto-order to replenish stock when it’s low.
+4. **Forecast Sales:** Use ML models to predict next-day sales and make data-driven decisions.
+
+---
+
+## Technologies Used
+
+- **Backend:** [Python Django]  
+
+- **Machine Learning:** Predictive sales forecasting models  
+- **API Integration:** Custom API for vending machine communication  
+
+---
+
+## Getting Started
+
+1. Clone the repository:
+
+   ```bash
+   git clone https://github.com/KonstantinosDa/omnivend_logic.git
