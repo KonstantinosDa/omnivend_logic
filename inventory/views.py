@@ -1,31 +1,44 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from .models import Product
 from rest_framework import generics
-from .models import VendingMachine,Store,Storage,Product,Category,OrderItem,Order
+from .models import VendingMachine,Store,Storage,Product,Category,Sales,MachineStock,OrderItem,Order,Item_Sales
 from .serializers import VendingMachineSerializer
 from .forms import MachineForm, ProductForm
 from django.contrib.auth.decorators import login_required
 from rest_framework.response import Response
 from rest_framework.decorators import api_view
+from django.utils.timezone import now
+import requests
 
-
+today = now().date()
 class VendingMachineList(generics.ListCreateAPIView):
 
     queryset = VendingMachine.objects.all()
     serializer_class = VendingMachineSerializer
 
+def weather_code(code):
+    if code == 0:
+        return "sunny"
+
+    elif code in [1, 2, 3]:
+        return "partly_cloudy"
+    
+    elif code in [61, 63, 65]:
+        return "rainy"
+    
+    else:
+        return "cloudy"
+
 @api_view(['POST'])
 def sync_machine_stock(request):
     machine_id = request.data.get("machine_id")
     stock_data = request.data.get("stock", [])
-    
     try:
         machine = VendingMachine.objects.get(id=machine_id)
         stock_items = machine.inventory.all()
         
     except VendingMachine.DoesNotExist:
         return Response({"error": "Machine not found"}, status=404)
-
     if request.data.get("event") == "sync":
         new_order, created = Order.objects.get_or_create(
                 order_type = "restock",
@@ -35,12 +48,50 @@ def sync_machine_stock(request):
             )
 
         for item in stock_data:
+            url = "https://api.open-meteo.com/v1/forecast?latitude={machine.latitude}.98&longitude={machine.longitude}.81&current_weather=true"
+            response = requests.get(url)
+            data = response.json()
+            temp = data["current_weather"]["temperature"]
+            code = data["current_weather"]["weathercode"]
+            weather = weather_code(code)
+
             product = Product.objects.get(id=item["product_id"])
             stock_item = stock_items.get(vending_machine_slot=item["slot"])
             stock_item.quantity =item["quantity"]
+            
+            sale, created = Sales.objects.get_or_create(
+                machine=machine,                 
+                interval_type="day",
+                created_at=today,
+                defaults={
+                    "source_type": "machine",
+                    "amount": 0
+                }
+            )
+            item_sale, created_ =Item_Sales.objects.get(
+                machine_item=item,                 
+                interval_type="day",
+                created_at=today,
+                defaults={
+                    "source_type": "machine",
+                    "amount": 0
+                }
+            )
+
+            if not item_sale.temperature_weather:
+                item_sale.temperature_weather = temp
+
+            if not item_sale.weather_type:    
+                item_sale.weather_type = weather
+
+            item_sale.amount += item["sold"] * product.price
+            sale.amount += item["sold"] * product.price
+            stock_item.sold_this_wheek = item["sold"]
+            sale.save()
             stock_item.save()
-            print("stock_item.quantity",stock_item.quantity)
-            print("stock_item.restock_threshold",stock_item.restock_threshold)
+            machine.save()
+            stock_item.save()
+
             if stock_item.quantity < stock_item.restock_threshold:
                 order_item, created = OrderItem.objects.get_or_create(
                     order=new_order,
@@ -55,7 +106,7 @@ def sync_machine_stock(request):
                 )
 
                 if not created:
-                    # Optionally update quantity instead of duplicating
+                    #  update quantity instead of duplicating
                     order_item.quantity = min(
                         stock_item.expected_demand,
                         machine.slot_cap - item["quantity"]
@@ -252,3 +303,7 @@ def edit_product(request):
             product.delete()
             
     return redirect('dashboard')
+
+
+
+

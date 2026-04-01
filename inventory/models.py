@@ -138,6 +138,7 @@ class MachineStock(models.Model):
     quantity = models.PositiveIntegerField(default=0)
     expected_demand = models.PositiveIntegerField(blank=True, null=True)
     restock_threshold = models.PositiveIntegerField(blank=True, null=True)
+    sold_this_month= models.PositiveIntegerField(blank=True, null=True,default=0)
     
     def save(self, *args, **kwargs):
         if not self.expected_demand:
@@ -175,3 +176,72 @@ class OrderItem(models.Model):
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
     slot = models.CharField(max_length=4,null=True, blank=True)  # only used for machine orders
     quantity = models.IntegerField()
+
+class Sales(models.Model):
+    SOURCE = [
+        ("store", "Store"),
+        ("machine", "Machine"),
+    ]
+
+    INTERVALS = [
+        ("day", "day"),
+        ("week", "week"),
+        ("month", "month"),
+        ("year", "year"),
+    ]
+
+    source_type = models.CharField(max_length=20, choices=SOURCE)
+    machine = models.ForeignKey(VendingMachine, null=True, blank=True, on_delete=models.CASCADE, related_name='sales')
+    store = models.ForeignKey(Store, null=True, blank=True, on_delete=models.CASCADE, related_name='sales')
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    interval_type = models.CharField(max_length=20, choices=INTERVALS)
+    created_at  = models.DateField()
+    ended_at = models.DateField(null=True, blank=True)
+  
+    class Meta:
+        unique_together = ("machine", "interval_type", "created_at")
+
+    def clean(self):
+
+        super().clean()
+        if self.source_type == "machine" and not self.machine:
+            raise ValidationError("Machine must be set when source_type is 'machine'.")
+        if self.source_type == "store" and not self.store:
+            raise ValidationError("Store must be set when source_type is 'store'.")
+        if self.source_type == "machine" and self.store:
+            raise ValidationError("Store must be empty when source_type is 'machine'.")
+        if self.source_type == "store" and self.machine:
+            raise ValidationError("Machine must be empty when source_type is 'store'.")
+
+class Item_Sales(models.Model):
+    SOURCE = [
+        ("store", "Store"),
+        ("machine", "Machine"),
+    ]
+
+    INTERVALS = [
+        ("day", "day"),
+        ("week", "week"),
+        ("month", "month"),
+        ("year", "year"),
+    ]
+    WEATHER_TYPES = [
+        ("cloudy","cloudy"),
+        ("sunny","sunny"),
+        ("windy","windy"),
+        ("stormy","stormy"),
+        ("partly_cloudy","partly_cloudy"),
+        ("rainy","rainy"),
+        ("snowy","snowy")
+    ]
+
+    source_type = models.CharField(max_length=20, choices=SOURCE)
+    machine_item = models.ForeignKey(MachineStock, null=True, blank=True, on_delete=models.CASCADE, related_name='item_sales')
+    store_item = models.ForeignKey(StorageStock, null=True, blank=True, on_delete=models.CASCADE, related_name='item_sales')
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    interval_type = models.CharField(max_length=20, choices=INTERVALS)
+    created_at  = models.DateField()
+    ended_at = models.DateField(null=True, blank=True)
+    temperature_weather = models.DecimalField(null=True, blank=True, max_digits=10, decimal_places=2)
+    weather_type = models.CharField(null=True, blank=True,max_length=20, choices=WEATHER_TYPES)
+
