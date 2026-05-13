@@ -8,6 +8,7 @@ from django.contrib.auth.decorators import login_required
 from rest_framework.response import Response
 from rest_framework.decorators import api_view
 from django.utils.timezone import now
+from django.db.models import Sum
 import requests
 
 today = now().date()
@@ -93,18 +94,23 @@ def sync_machine_stock(request):
             stock_item.save()
 
             if stock_item.quantity < stock_item.restock_threshold:
-                order_item, created = OrderItem.objects.get_or_create(
+
+                if stock_item.demadn_setting == "auto":
+                    quantity = min(
+                        stock_item.expected_demand,
+                        machine.slot_cap - item["quantity"]
+                    )
+                else:
+                    quantity = stock_item.restock_set
+
+                order_item, created = OrderItem.objects.update_or_create(
                     order=new_order,
                     product=product,
                     slot=item["slot"],
                     defaults={
-                        "quantity": min(
-                            stock_item.expected_demand,
-                            machine.slot_cap - item["quantity"]
-                        )
+                        "quantity": quantity
                     }
                 )
-
                 if not created:
                     #  update quantity instead of duplicating
                     order_item.quantity = min(
@@ -127,12 +133,16 @@ def landing_page(request):
 
 @login_required
 def dashboard_home(request):
-
-    machines = VendingMachine.objects.all()
+    
+    machines = VendingMachine.objects.annotate(
+    total_sales=Sum('sales__amount')
+)
     stores = Store.objects.all()
     storage = Storage.objects.all()
     products = Product.objects.all()
     category = Category.objects.all()
+    
+
     return render(request, 'inventory/dashboard_home.html', {
         'stores' : stores,
         'store_count' : stores.count(),
@@ -248,7 +258,40 @@ def add_storage(request):
         )
     return redirect('dashboard')
 
+def edit_machine_inventory(request):
+    if request.method == "POST":
+        machine_id =request.POST.get("machine_id")
+        stock_ids = request.POST.getlist("stock_ids[]")
+        new_entrys = request.POST.getlist("new_slot_"+str(machine_id))
 
+        for stock_id in stock_ids:
+            changed = request.POST.get("changed_"+stock_id)
+            if changed != '0' :
+                machine_stock = get_object_or_404(MachineStock, id=stock_id)
+                machine_stock.demadn_setting= request.POST.get("mode_"+stock_id)
+                machine_stock.vending_machine_slot=request.POST.get("slot_"+stock_id)
+                machine_stock.product=get_object_or_404(Product,id=request.POST.get("product_"+stock_id))
+                machine_stock.quantity=request.POST.get("quantity_"+stock_id)
+                machine_stock.restock_threshold=request.POST.get("threshold_"+stock_id)
+                machine_stock.save()
+                
+        for new_entry in new_entrys: 
+            MachineStock.objects.create(
+                vending_machine= get_object_or_404(VendingMachine,id=machine_id),
+                demadn_setting=request.POST.get("new_mode_"+machine_id),
+                vending_machine_slot =new_entry,
+                product=get_object_or_404(Product,id=request.POST.get("new_product_"+machine_id)),
+                quantity=request.POST.get("new_quantity_"+machine_id),
+                restock_threshold=request.POST.get("new_threshold_"+machine_id)
+            )
+
+        delete_ids = request.POST.getlist("delete_stock_ids")
+        for delete_id in delete_ids:
+            id_=int(delete_id)
+            MachineStock.objects.filter(id=int(id_)).delete()
+
+        return redirect('dashboard')
+        
 def edit_storage(request):
 
     if request.method == "POST":

@@ -11,7 +11,7 @@ app.autodiscover_tasks()
 app.conf.beat_schedule = {
     # Daily aggregation task at midnight
     "daily-aggregations": {
-        "task": "inventory.tasks.run_daily_aggregations",  # your task path
+        "task": "inventory.tasks.run_daily_aggregations", 
         "schedule": crontab(hour=0, minute=0),
     },
 }

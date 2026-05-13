@@ -97,7 +97,7 @@ def expected_demand():
         model = RandomForestRegressor(n_estimators=150, random_state=42)
         model.fit(X, y)
 
-        # 🔮 Predict tomorrow
+        # Predict tomorrow
         tomorrow = date.today() + timedelta(days=1)
         temp = get_tomorrow_weather()
 

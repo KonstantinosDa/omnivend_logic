@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.urls import path
-from inventory.views import VendingMachineList,landing_page,dashboard_home,sync_machine_stock,add_machine,add_store,edit_machine,edit_store,add_storage,edit_storage,add_product,edit_product
+from inventory.views import VendingMachineList,edit_machine_inventory,landing_page,dashboard_home,sync_machine_stock,add_machine,add_store,edit_machine,edit_store,add_storage,edit_storage,add_product,edit_product
 from django.conf import settings
 from django.conf.urls.static import static
 urlpatterns = [
@@ -17,5 +17,6 @@ urlpatterns = [
     path('edit-storage/', edit_storage, name='edit_storage'),
     path('add-product/', add_product, name='add_product'),
     path('edit-product/', edit_product, name='edit_product'),
+    path('/edit-machine_inventory',edit_machine_inventory, name='edit_machine_inventory'),
 
 ]+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

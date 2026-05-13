@@ -76,8 +76,11 @@
                 <thead>
                     <tr class="text-muted">
                         <th>Location</th>
+                        <th>Total Sales</th>
+                        <th>Order</th>
                         <th>Status</th>
                         <th>Coordinates</th>
+                        <th>Restock mode</th>
                         <th class="text-end">Actions</th>
                     </tr>
                 </thead>
@@ -86,14 +89,131 @@
                     {% for machine in machines %}
                     <tr>
                         <td><strong>{{ machine.location_name }}</strong></td>
+                        <td>{{ machine.total_sales|default:0 }}</td>
+                        <td>
+                            {% with order=machine.order.first %}
+                                {% if order %}
+
+                                    <button 
+                                        type="button"
+                                        class="btn btn-sm btn-primary"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#orderModal{{ order.id }}"
+                                    >
+                                        {{ order.status }}
+                                    </button>
+
+                                    <!-- order Modal -->
+                                    <div class="modal fade" id="orderModal{{ order.id }}" tabindex="-1">
+                                        <div class="modal-dialog modal-lg">
+                                            <div class="modal-content">
+
+                                                <div class="modal-header">
+                                                    <h5 class="modal-title">
+                                                        Order #{{ order.id }}
+                                                    </h5>
+
+                                                    <button 
+                                                        type="button"
+                                                        class="btn-close"
+                                                        data-bs-dismiss="modal">
+                                                    </button>
+                                                </div>
+
+                                                <!-- Printable Area -->
+                                                <div class="modal-body" id="printArea{{ order.id }}">
+
+                                                    <h4>Order Details</h4>
+
+                                                    <p><strong>Status:</strong> {{ order.status }}</p>
+
+                                                    <p><strong>Type:</strong> {{ order.order_type }}</p>
+
+                                                    <p><strong>Created:</strong> {{ order.created_at }}</p>
+
+                                                    <p><strong>Machine:</strong> {{ machine.location_name }}</p>
+
+                                                    <hr>
+
+                                                    <h5>Items</h5>
+
+                                                    <table class="table table-bordered">
+                                                        <thead>
+                                                            <tr>
+                                                                <th>Product</th>
+                                                                <th>Slot</th>
+                                                                <th>Quantity</th>
+                                                            </tr>
+                                                        </thead>
+
+                                                        <tbody>
+                                                            {% for item in order.items.all %}
+                                                            <tr>
+                                                                <td>{{ item.product }}</td>
+                                                                <td>{{ item.slot }}</td>
+                                                                <td>{{ item.quantity }}</td>
+                                                            </tr>
+                                                            {% endfor %}
+                                                        </tbody>
+                                                    </table>
+
+                                                </div>
+
+                                                <div class="modal-footer">
+
+                                                    <!-- Print Button -->
+                                                    <button 
+                                                        type="button"
+                                                        class="btn btn-success"
+                                                        onclick="printOrder('printArea{{ order.id }}')"
+                                                    >
+                                                        Print
+                                                    </button>
+
+                                                    <button 
+                                                        type="button"
+                                                        class="btn btn-secondary"
+                                                        data-bs-dismiss="modal">
+                                                        Close
+                                                    </button>
+
+                                                </div>
+
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                {% else %}
+                                    No Order
+                                {% endif %}
+                            {% endwith %}
+                        </td>
                         <td>
                             <span class="badge bg-success-subtle text-success px-3">
                                 {{ machine.get_status_display  }}
                             </span>
                         </td>
                         <td class="text-muted small">
-                            {{ machine.latitude }}, {{ machine.longitude }}
+                            <span
+                                class="coords-hover"
+                                data-lat="{{ machine.latitude }}"
+                                data-lng="{{ machine.longitude }}"
+                            >
+                                📍 View Map
+                            </span>
                         </td>
+                        <td>
+                            <button
+                                class="btn btn-sm btn-outline-primary"
+                                data-bs-toggle="modal"
+                                data-bs-target="#inventoryModal{{ machine.id }}"
+                            >
+                                View Inventory
+                            </button>
+
+
+                        </td>
+                        
                         <td class="text-end">
                             <button 
                                 class="btn btn-sm btn-outline-secondary MachineManage-btn"
@@ -122,6 +242,9 @@
     </div>
 </div>
 
+<div id="map-preview">
+    <iframe id="map-frame"></iframe>
+</div>  
 <!-- Stores Table -->
 <div class="card mb-4">
     <div class="card-header bg-white py-3">
@@ -744,7 +867,7 @@
 
 
 
-{% comment %} product panage madal {% endcomment %}
+{% comment %} product manage madal {% endcomment %}
 <div class="modal fade" id="ProductManageModal" tabindex="-1">
   <div class="modal-dialog">
     <div class="modal-content">
@@ -883,6 +1006,138 @@
     </div>
   </div>
 </div>
+
+
+{% for machine in machines %}
+
+<div class="modal fade"
+     id="inventoryModal{{ machine.id }}"
+     tabindex="-1">
+
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+
+            <form method="POST" action="{% url 'edit_machine_inventory' %}">
+                {% csrf_token %}
+                <input type="hidden" name="machine_id" value="{{ machine.id }}">
+
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        {{ machine.location_name }} Inventory
+                    </h5>
+
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+
+                <div class="modal-body">
+
+                    <table class="table align-middle">
+
+                        <thead>
+                            <tr>
+                                <th>Slot</th>
+                                <th>Product</th>
+                                <th>Qty</th>
+                                <th>Threshold</th>
+                                <th>Mode</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+
+                        <tbody id="inventory-body-{{ machine.id }}">
+
+                        {% for stock in machine.inventory.all %}
+                        <tr>
+                            <input type="hidden" name="changed_{{ stock.id }}" value="0">
+                            <input type="hidden" name="stock_ids[]" value="{{ stock.id }}">
+                            <td>
+                                <input class="form-control"
+                                       name="slot_{{ stock.id }}"
+                                       value="{{ stock.vending_machine_slot }}">
+                            </td>
+
+                            <td>
+                                <select class="form-select"
+                                        name="product_{{ stock.id }}">
+
+                                    {% for product in products %}
+                                        <option value="{{ product.id }}"
+                                            {% if product.id == stock.product.id %}selected{% endif %}>
+                                            {{ product.name }}
+                                        </option>
+                                    {% endfor %}
+
+                                </select>
+                            </td>
+
+                            <td>
+                                <input class="form-control"
+                                       type="number"
+                                       name="quantity_{{ stock.id }}"
+                                       value="{{ stock.quantity }}">
+                            </td>
+
+                            <td>
+                                <input class="form-control"
+                                       type="number"
+                                       name="threshold_{{ stock.id }}"
+                                       value="{{ stock.restock_threshold }}">
+                            </td>
+
+                            <td>
+                                <select class="form-select"
+                                        name="mode_{{ stock.id }}">
+
+                                    <option value="auto"
+                                        {% if stock.demadn_setting == "auto" %}selected{% endif %}>
+                                        Auto
+                                    </option>
+
+                                    <option value="set"
+                                        {% if stock.demadn_setting == "set" %}selected{% endif %}>
+                                        Set
+                                    </option>
+
+                                </select>
+                            </td>
+                            <td>
+                                <button type="button"
+                                        class="btn btn-sm btn-danger"
+                                        onclick="deleteRow(this, {{ stock.id }})">
+                                    Remove
+                                </button>
+                            </td>
+
+                        </tr>
+                        {% endfor %}
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+                <div class="modal-footer">
+                    
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        Close
+                    </button>
+
+                    <button type="submit" class="btn btn-success">
+                        Save
+                    </button>
+                    <button type="button" class="btn btn-primary " onclick="addRow({{ machine.id }})">
+                        + Add Product
+                    </button>
+                </div>
+
+            </form>
+
+        </div>
+    </div>
+</div>
+
+{% endfor %}
 <!-- store manage javasript --> 
 <script>
     document.addEventListener('DOMContentLoaded', function () {
@@ -990,7 +1245,52 @@
             preview.style.display = 'none';
         });
     });
+    function printOrder(divId) {
 
+        const printContents = document.getElementById(divId).innerHTML;
+
+        const printWindow = window.open('', '', 'height=800,width=1000');
+
+        printWindow.document.write(`
+            <html>
+                <head>
+                    <title>Print Order</title>
+
+                    <link rel="stylesheet"
+                    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+
+                    <style>
+                        body{
+                            padding:20px;
+                        }
+
+                        table{
+                            width:100%;
+                            border-collapse:collapse;
+                        }
+
+                        th, td{
+                            border:1px solid #ccc;
+                            padding:8px;
+                            text-align:left;
+                        }
+                    </style>
+                </head>
+
+                <body>
+                    ${printContents}
+                </body>
+            </html>
+        `);
+
+        printWindow.document.close();
+
+        printWindow.focus();
+
+        printWindow.print();
+
+        printWindow.close();
+}
 </script>
 
 {% comment %} img hover preview {% endcomment %}
@@ -1030,4 +1330,146 @@
         display: block;
     }
 </style>
+<style>
+#map-preview {
+    position: fixed;
+    display: none;
+
+    width: 260px;
+    height: 190px;
+
+    background: white;
+    border-radius: 12px;
+
+    overflow: hidden;
+
+    box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+
+    z-index: 999999;
+
+    pointer-events: none;
+}
+
+#map-preview iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+}
+
+.coords-hover {
+    cursor: pointer;
+    color: #0d6efd;
+}
+</style>
+<script>
+const preview = document.getElementById("map-preview");
+const frame = document.getElementById("map-frame");
+
+document.querySelectorAll(".coords-hover").forEach((el) => {
+
+    el.addEventListener("mouseenter", (e) => {
+
+        const lat = el.dataset.lat;
+        const lng = el.dataset.lng;
+
+        frame.src = `https://maps.google.com/maps?q=${lat},${lng}&z=15&output=embed`;
+
+        preview.style.display = "block";
+
+        // position once near mouse
+        preview.style.left = (e.clientX + 20) + "px";
+        preview.style.top = (e.clientY + 20) + "px";
+    });
+
+    el.addEventListener("mouseleave", () => {
+        preview.style.display = "none";
+    });
+
+});
+
+
+
+function addRow(machineId) {
+
+    const tbody = document.getElementById(`inventory-body-${machineId}`);
+
+    const row = document.createElement("tr");
+
+    row.innerHTML = `
+        <td>
+            <input class="form-control" name="new_slot_${machineId}" placeholder="Slot">
+        </td>
+
+        <td>
+            <select class="form-select" name="new_product_${machineId}">
+                ${getProductOptions()}
+            </select>
+        </td>
+
+        <td>
+            <input class="form-control" type="number" name="new_quantity_${machineId}" value="0">
+        </td>
+
+        <td>
+            <input class="form-control" type="number" name="new_threshold_${machineId}" value="0">
+        </td>
+
+        <td>
+            <select class="form-select" name="new_mode_${machineId}">
+                <option value="auto">Auto</option>
+                <option value="set">Set</option>
+            </select>
+        </td>
+        <td>
+            <button type="button"
+                    class="btn btn-sm btn-danger"
+                    onclick="this.closest('tr').remove()">
+                Remove
+            </button>
+        </td>
+    `;
+
+    tbody.appendChild(row);
+}
+</script>
+<script>
+const products = [
+    {% for product in products %}
+        { id: "{{ product.id }}", name: "{{ product.name }}" },
+    {% endfor %}
+];
+
+function getProductOptions() {
+    return products.map(p =>
+        `<option value="${p.id}">${p.name}</option>`
+    ).join("");
+}
+document.addEventListener("input", function (e) {
+    const row = e.target.closest("tr");
+    if (!row) return;
+
+    const hidden = row.querySelector("input[name^='changed_']");
+    if (hidden) {
+        hidden.value = "1";
+    }
+});
+
+
+
+
+function deleteRow(btn, id) {
+    const row = btn.closest("tr");
+
+    // create hidden input INSIDE the form
+    const input = document.createElement("input");
+    input.type = "hidden";
+    input.name = "delete_stock_ids";   // SAME NAME for all
+    input.value = id;
+
+    // IMPORTANT: append to the FORM, not the row
+    row.closest("form").appendChild(input);
+
+    row.remove();
+}
+</script>
 {% endblock %}

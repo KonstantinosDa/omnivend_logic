@@ -138,11 +138,14 @@ class MachineStock(models.Model):
     quantity = models.PositiveIntegerField(default=0)
     expected_demand = models.PositiveIntegerField(blank=True, null=True)
     restock_threshold = models.PositiveIntegerField(blank=True, null=True)
+    restock_set = models.PositiveIntegerField(blank=True, null=True)
     sold_this_month= models.PositiveIntegerField(blank=True, null=True,default=0)
     
     def save(self, *args, **kwargs):
         if not self.expected_demand:
             self.expected_demand = self.vending_machine.slot_cap
+        if self.restock_set is None:
+            self.restock_set = self.vending_machine.slot_cap
 
         if not self.restock_threshold:
             self.restock_threshold = self.vending_machine.slot_cap
@@ -235,3 +238,4 @@ class Item_Sales(models.Model):
     temperature_weather = models.DecimalField(null=True, blank=True, max_digits=10, decimal_places=2)
     weather_type = models.CharField(null=True, blank=True,max_length=20, choices=WEATHER_TYPES)
 
+3
