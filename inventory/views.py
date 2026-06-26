@@ -1,17 +1,23 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from .models import Product
+from django.utils.timezone import now
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User, Group
+from django.db.models import Q
+from django.http import HttpResponseForbidden
+from rest_framework.response import Response
+from rest_framework.decorators import api_view
 from rest_framework import generics
 from .models import VendingMachine,Store,Storage,Product,Category,Sales,MachineStock,OrderItem,Order,Item_Sales
 from .serializers import VendingMachineSerializer
-from .forms import MachineForm, ProductForm
-from django.contrib.auth.decorators import login_required
-from rest_framework.response import Response
-from rest_framework.decorators import api_view
-from django.utils.timezone import now
-from django.db.models import Sum
 import requests
 
+ROLE_HIERARCHY = {
+    "admin": ["admin", "manager", "driver", "employee", "warehouse"],
+    "manager": ["driver", "employee", "warehouse"],
+}
+
 today = now().date()
+
 class VendingMachineList(generics.ListCreateAPIView):
 
     queryset = VendingMachine.objects.all()
@@ -134,14 +140,25 @@ def landing_page(request):
 @login_required
 def dashboard_home(request):
     
-    machines = VendingMachine.objects.annotate(
-    total_sales=Sum('sales__amount')
-)
-    stores = Store.objects.all()
-    storage = Storage.objects.all()
+    user = request.user
+    if not user.groups.filter(name="admin").exists():
+        machines = VendingMachine.objects.filter(
+        Q(managers=request.user) | Q(employees=request.user)
+    )
+        stores = Store.objects.filter(
+        Q(managers=request.user) | Q(employees=request.user)
+    )
+        storage = Storage.objects.filter(
+        Q(managers=request.user) | Q(employees=request.user)
+    )
+        
+    else:
+        machines = VendingMachine.objects.all()
+        stores = Store.objects.all()
+        storage = Storage.objects.all()
+
     products = Product.objects.all()
     category = Category.objects.all()
-    
 
     return render(request, 'inventory/dashboard_home.html', {
         'stores' : stores,
@@ -154,28 +171,33 @@ def dashboard_home(request):
         'product_count' : products.count(),
         'category': category,
         'category_count': category.count(),
+        'user':user,
 
     })
 
 
 def add_machine(request):
 
-    if request.method == "POST":
-        VendingMachine.objects.create(
-            MachineName=request.POST['machine_name'],
-            location_name=request.POST['location_name'],
-            latitude=request.POST['latitude'],
-            longitude=request.POST['longitude'],
-            slot_cap= request.POST['capaciry']
-        )
-    return redirect('dashboard')
+    if not request.user.groups.filter(name="admin").exists():
+        if request.method == "POST":
+            VendingMachine.objects.create(
+                MachineName=request.POST['machine_name'],
+                location_name=request.POST['location_name'],
+                latitude=request.POST['latitude'],
+                longitude=request.POST['longitude'],
+                slot_cap= request.POST['capaciry']
+            )
+        return redirect('dashboard')
 
 def add_store(request):
 
+    user = request.user
+    if not user.groups.filter(name="admin").exists():
+        return HttpResponseForbidden("Admins only")
+    
     if request.method == "POST":
         selected_days = request.POST.getlist('open_days')
 
-        # Convert strings → int and sum them 
         open_days_int = sum(int(day) for day in selected_days)
         Store.objects.create(
             location_name=request.POST['location_name'],
@@ -185,10 +207,47 @@ def add_store(request):
             opening_time = request.POST['opening_time'],
             closing_time = request.POST['closing_time'],
         )
+        return redirect('dashboard')
+
+def add_storage(request):
+
+    if not request.user.groups.filter(name="admin").exists():
+        return HttpResponseForbidden("Admins only")
+    
+    if request.method == "POST":
+        Storage.objects.create(
+            name=request.POST['name'],
+            location_name=request.POST['location_name'],
+            latitude=float(request.POST['latitude']),
+            longitude=float(request.POST['longitude']),
+        )
+    return redirect('dashboard')
+
+
+def add_product(request):
+    
+    if not request.user.groups.filter(name="admin").exists():
+        return HttpResponseForbidden("Admins only")
+    
+    if request.method == "POST":
+        category_id = request.POST.get("category")
+        category = Category.objects.get(id=category_id)
+        image_ = request.FILES.get("image")
+        print(request.FILES)
+        Product.objects.create(
+            name=request.POST['name'],
+            category=category,
+            price=float(request.POST['Price']),
+            stock_quantity=float(request.POST['stock_quantity']),
+            image=image_,
+        )
     return redirect('dashboard')
 
 
 def edit_store(request):
+    user = request.user
+    if not user.groups.filter(name__in=["manager", "admin"]).exists():
+        return HttpResponseForbidden("Admins or Managers only")
     DAY_BITMASK = {
         "Mon": 1,    
         "Tue": 2,    
@@ -202,6 +261,11 @@ def edit_store(request):
     if request.method == "POST":
         store_id = request.POST.get("store_id")
         store = get_object_or_404(Store, id=store_id)
+
+        if not user.groups.filter(name="admin").exists():
+            if not store.managers.filter(id=user.id).exists():
+                return HttpResponseForbidden("Not allowed")
+            
         action = request.POST.get("action")
 
         if action =='save':
@@ -223,10 +287,17 @@ def edit_store(request):
 
 
 def edit_machine(request):
-
+    user = request.user
+    if not user.groups.filter(name__in=["manager", "admin"]).exists():
+        return HttpResponseForbidden("Admins or Managers only")
+    
     if request.method == "POST":
         machine_id = request.POST.get("machine_id")
-        machine = get_object_or_404(VendingMachine, id=machine_id)
+        machine = get_object_or_404(Store, id=machine_id)
+
+        if not user.groups.filter(name="admin").exists() and not machine.managers.filter(id=user.id).exists():
+            return HttpResponseForbidden("Not allowed")
+            
         action = request.POST.get("action")
 
         if action == "save":
@@ -247,20 +318,18 @@ def edit_machine(request):
     return redirect('dashboard')
 
 
-def add_storage(request):
-
-    if request.method == "POST":
-        Storage.objects.create(
-            name=request.POST['name'],
-            location_name=request.POST['location_name'],
-            latitude=float(request.POST['latitude']),
-            longitude=float(request.POST['longitude']),
-        )
-    return redirect('dashboard')
-
 def edit_machine_inventory(request):
+    user = request.user
+    if not user.groups.filter(name__in=["manager", "admin"]).exists():
+        return HttpResponseForbidden("Admins or Managers only")
+    
     if request.method == "POST":
         machine_id =request.POST.get("machine_id")
+        machine = get_object_or_404(Store, id=machine_id)
+
+        if not user.groups.filter(name="admin").exists() and not machine.managers.filter(id=user.id).exists():
+            return HttpResponseForbidden("Not allowed")
+        
         stock_ids = request.POST.getlist("stock_ids[]")
         new_entrys = request.POST.getlist("new_slot_"+str(machine_id))
 
@@ -291,12 +360,21 @@ def edit_machine_inventory(request):
             MachineStock.objects.filter(id=int(id_)).delete()
 
         return redirect('dashboard')
-        
+
+
 def edit_storage(request):
 
+    user = request.user
+    if not user.groups.filter(name__in=["manager", "admin"]).exists():
+        return HttpResponseForbidden("Admins or Managers only")
+    
     if request.method == "POST":
         storage_id = request.POST.get("storage_id")
         storage = get_object_or_404(Storage, id=storage_id)
+
+        if not user.groups.filter(name="admin").exists() and not storage.managers.filter(id=user.id).exists():
+            return HttpResponseForbidden("Not allowed")
+        
         action = request.POST.get("action")
 
         if action == "save":
@@ -311,22 +389,12 @@ def edit_storage(request):
             
     return redirect('dashboard')
 
-def add_product(request):
-    if request.method == "POST":
-        category_id = request.POST.get("category")
-        category = Category.objects.get(id=category_id)
-        image_ = request.FILES.get("image")
-        print(request.FILES)
-        Product.objects.create(
-            name=request.POST['name'],
-            category=category,
-            price=float(request.POST['Price']),
-            stock_quantity=float(request.POST['stock_quantity']),
-            image=image_,
-        )
-    return redirect('dashboard')
 
 def edit_product(request):
+    
+    if not request.user.groups.filter(name="admin").exists():
+        return HttpResponseForbidden("Admins only")
+    
     if request.method == "POST":
         product_id = request.POST.get("product_id")
         product = get_object_or_404(Product, id=product_id)
@@ -349,4 +417,46 @@ def edit_product(request):
 
 
 
+def can_assign_role(user, role):
+    user_role = user.groups.first().name if user.groups.exists() else None
+    allowed = ROLE_HIERARCHY.get(user_role, [])
+    return role in allowed
 
+def signup(request):
+    user = request.user
+    if not user.groups.filter(name="admin").exists() and not user.groups.filter(name="manager").exists() :
+        return HttpResponseForbidden("Not allowed")
+    
+    if request.method == "POST":
+        username = request.POST.get("username")
+        email = request.POST.get("email")
+        password = request.POST.get("password")
+        confirm_password = request.POST.get("confirm_password")
+        role = request.POST.get("role")
+
+        if password != confirm_password:
+            return render(request, "signup.html", {"error": "Passwords do not match"})
+
+        if User.objects.filter(username=username).exists():
+            return render(request, "signup.html", {"error": "Username already exists"})
+        
+        if not can_assign_role(user, role):
+            return HttpResponseForbidden("You cannot assign this role")
+        
+        new_user = User.objects.create_user(
+            username=username,
+            email=email,
+            password=password
+        )
+        
+        group = Group.objects.get(name=role)
+        new_user.groups.add(group)
+        
+        
+    return render(request, "inventory/signup.html", { 
+        'ROLE_PERMISSIONS':ROLE_HIERARCHY[user.groups.first().name],
+
+    })
+
+def user_manager(request):
+    pass 

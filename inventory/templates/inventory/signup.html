@@ -1,0 +1,28 @@
+{% extends "inventory/dashboard_base.html" %}
+
+<!-- this html is temporary -->
+{% block content %}
+<h2>Create Account</h2>
+
+<form method="post">
+    {% csrf_token %}
+
+    <input type="text" name="username" placeholder="Username" required><br>
+
+    <input type="email" name="email" placeholder="Email" required><br>
+
+    <input type="password" name="password" placeholder="Password" required><br>
+
+    <input type="password" name="confirm_password" placeholder="Confirm Password" required><br>
+
+    <select name="role" required>
+        <option value="">Select Role</option>
+        {% for role in ROLE_PERMISSIONS %}
+        <option value="admin">{{ role }}</option>
+        {% endfor %}
+    </select><br><br>
+
+    <button type="submit">Create Account</button>
+</form>
+
+ {% endblock %}

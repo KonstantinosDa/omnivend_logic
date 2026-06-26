@@ -1,7 +1,19 @@
 from django.db import models
 from django.utils.text import slugify
+from django.contrib.auth.models import AbstractUser
 
 
+from django.contrib.auth.models import User
+
+class UserProfile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    phone = models.CharField(max_length=20, blank=True, null=True)
+    
+    def __str__(self):
+        return self.user.username
+
+    def __str__(self):
+        return f"{self.user.username} ({self.role})"
 
 class Category(models.Model):
     name = models.CharField(max_length=100)
@@ -24,6 +36,17 @@ class Storage(models.Model):
     location_name = models.CharField(max_length=200)
     latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
     longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    managers = models.ManyToManyField(
+    User,
+    related_name="managed_storage",
+    blank=True
+    )
+
+    employees = models.ManyToManyField(
+        User,
+        related_name="employee_storage",
+        blank=True
+    )
 
 
 
@@ -40,6 +63,17 @@ class Store(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Closed')
     opening_time = models.TimeField(null=True, blank=True)
     closing_time = models.TimeField(null=True, blank=True)
+    managers = models.ManyToManyField(
+        User,
+        related_name="managed_stores",
+        blank=True
+    )
+
+    employees = models.ManyToManyField(
+        User,
+        related_name="employee_stores",
+        blank=True
+    )
 
     # why IntegerField you ask whelp this is the most efficient way to store this data 
     # every day i going to have a bit value Mon = 1 Tue = 2 Wed = 4 Thu = 8  Fri = 16 Sat = 32 Sun = 64
@@ -79,7 +113,17 @@ class VendingMachine(models.Model):
     longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='inactive')
     slot_cap = models.IntegerField(default=15)
+    managers = models.ManyToManyField(
+        User,
+        related_name="managed_vendingMachine",
+        blank=True
+    )
 
+    employees = models.ManyToManyField(
+        User,
+        related_name="employee_vendingMachine",
+        blank=True
+    )
 
 
     def save(self, *args, **kwargs):
@@ -116,6 +160,17 @@ class Product(models.Model):
     price = models.DecimalField(max_digits=6, decimal_places=2)
     stock_quantity = models.IntegerField(default=0)
     image = models.ImageField(upload_to='products/', blank=True, null=True)
+    managers = models.ManyToManyField(
+        User,
+        related_name="managed_product",
+        blank=True
+    )
+
+    employees = models.ManyToManyField(
+        User,
+        related_name="employee_product",
+        blank=True
+    )
     def __str__(self):
         return f"{self.name} ({self.category.name if self.category else 'No Category'})"
 

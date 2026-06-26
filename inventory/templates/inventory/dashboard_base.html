@@ -40,6 +40,12 @@
     <div class="row">
         <nav class="col-md-2 d-none d-md-block sidebar px-3">
             <h3 class="text-info fw-bold px-3 mb-4">OmniVend</h3>
+            <h5> USER: {{ request.user.username }}</h5>
+            <h6>STATUS:
+            {% for group in request.user.groups.all %}
+                {{ group.name }}
+            {% endfor %}
+            </h6>
             <ul class="nav flex-column">
                 <li class="nav-item">
                     <a class="nav-link active" href="{% url 'dashboard' %}">📊 Overview</a>
@@ -50,10 +56,17 @@
                 <li class="nav-item">
                     <a class="nav-link" href="#">🍿 Products</a>
                 </li>
-                <hr class="text-secondary">
                 <li class="nav-item">
-                    <a class="nav-link text-danger" href="/admin/logout/">Logout</a>
+                    <a class="nav-link" href="{% url 'signup' %}">👤 Create User</a>
                 </li>
+                <hr class="text-secondary">
+                <form method="post" action="{% url 'logout' %}">
+                    {% csrf_token %}
+                    <button type="submit" class="nav-link text-danger" style="border:none; background:none;">
+                        Logout
+                    </button>
+                </form>
+                
             </ul>
         </nav>
 
